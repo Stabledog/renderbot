@@ -114,6 +114,25 @@ function render() {
   log('--- End simulation ---');
 }
 
+// live.button outputs 1 (press) then 0 (release). Treat a 1 as a render trigger.
+function msg_int(v) {
+  if (v === 1) {
+    dlog('Received int 1 from button -> triggering render()');
+    render();
+  }
+}
+
+function msg_float(v) { // Just delegate to int logic after truncation
+  msg_int(Math.floor(v));
+}
+
+// Catch-all for unexpected symbols (debug aid). Disabled by default to avoid noise.
+// Uncomment if you need to inspect stray messages reaching the js object.
+// function anything() {
+//   var a = arrayfromargs(messagename, arguments);
+//   dlog('ANYTHING message:', a);
+// }
+
 // Debug helper to list locators.
 function test_locators() {
   var locs = listLocators();
@@ -244,3 +263,4 @@ function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
 // Initialization log
 log('Loaded RenderBot Phase 1 JS. Send "output_dir <path>" then bang to simulate.');
+
