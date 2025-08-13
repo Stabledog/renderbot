@@ -32,6 +32,10 @@ outlets = 1; // Outlet 0: status / summary lines (optional for UI display)
 // Auto-reload this script in Max when the file changes on disk.
 autowatch = 1;
 
+// Bump this VERSION string whenever you want to visually confirm a reload.
+var VERSION = '0.1.1-dev';
+var LOAD_TIME_ISO = (new Date()).toISOString();
+
 var state = {
   outputDir: '',
   debug: 1,
@@ -195,20 +199,34 @@ function getHostTrackInfo() {
 function listLocators() {
   var song = getSong();
   if (!song) return [];
+  var propsToTry = ['locators', 'cue_points']; // Different Live versions / docs naming
+  var propUsed = null;
   var count = 0;
-  try {
-    count = song.getcount('locators');
-  } catch (e) {
-    log('No locator count available', e);
+  for (var p = 0; p < propsToTry.length; p++) {
+    try {
+      count = song.getcount(propsToTry[p]);
+      propUsed = propsToTry[p];
+      break;
+    } catch (e) {
+      // continue
+    }
+  }
+  if (propUsed === null) {
+    log('Could not access locators (tried: locators, cue_points). Live version difference?');
     return [];
   }
+  dlog('Locator container property detected:', propUsed, 'count=', count);
   var locs = [];
   for (var i = 0; i < count; i++) {
     try {
-      var locPath = 'live_set locators ' + i;
+      var locPath = 'live_set ' + propUsed + ' ' + i;
       var locAPI = new LiveAPI(locPath);
-      var name = locAPI.get('name');
-      var timeBeats = secondsToBeats(parseFloat(locAPI.get('time')));
+      var rawName = locAPI.get('name');
+      var name = (rawName && rawName.trim) ? rawName.trim() : rawName;
+      var timeSecRaw = locAPI.get('time');
+      var timeSec = parseFloat(timeSecRaw);
+      if (isNaN(timeSec)) timeSec = 0;
+      var timeBeats = secondsToBeats(timeSec);
       locs.push({ index: i, name: name, timeBeats: timeBeats });
     } catch (e2) {
       log('Locator read error @', i, e2);
@@ -220,9 +238,13 @@ function listLocators() {
 function findRenderEndLocator() {
   var locs = listLocators();
   for (var i = 0; i < locs.length; i++) {
-    if (String(locs[i].name).toLowerCase() === 'renderend') {
+    var nm = ('' + locs[i].name).trim().toLowerCase();
+    if (nm === 'renderend') {
       return { found: true, timeBeats: locs[i].timeBeats, index: locs[i].index };
     }
+  }
+  if (locs.length) {
+    dlog('Available locator names:', locs.map(function(l){return l.name;}).join(', '));
   }
   return { found: false };
 }
@@ -261,6 +283,11 @@ function sanitizeName(name) {
 
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
-// Initialization log
-log('Loaded RenderBot Phase 1 JS. Send "output_dir <path>" then bang to simulate.');
+// Initialization log (prints each time the script is (re)loaded by autowatch)
+log('Loaded RenderBot Phase 1 JS v' + VERSION + ' @ ' + LOAD_TIME_ISO + '  Send "output_dir <path>" then bang to simulate.');
+
+// Manual version ping (invoke by sending the symbol 'ping' to the js object)
+function ping() {
+  log('Ping v' + VERSION + ' (loaded ' + LOAD_TIME_ISO + ') debug=' + state.debug + ' outputDir=' + (state.outputDir||'(not set)'));
+}
 
