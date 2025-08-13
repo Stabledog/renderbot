@@ -199,40 +199,35 @@ function getHostTrackInfo() {
 function listLocators() {
   var song = getSong();
   if (!song) return [];
-  var propsToTry = ['locators', 'cue_points']; // Different Live versions / docs naming
-  var propUsed = null;
-  var count = 0;
-  for (var p = 0; p < propsToTry.length; p++) {
-    try {
-      count = song.getcount(propsToTry[p]);
-      propUsed = propsToTry[p];
-      break;
-    } catch (e) {
-      // continue
+  
+  try {
+    // In Live 12, locators are accessed via "cue_points"
+    var liveSet = new LiveAPI("live_set");
+    var count = liveSet.getcount("cue_points");
+    
+    dlog('Locator container property detected: cue_points count=', count);
+    
+    var locs = [];
+    for (var i = 0; i < count; i++) {
+      try {
+        var locPath = 'live_set cue_points ' + i;
+        var locAPI = new LiveAPI(locPath);
+        var rawName = locAPI.get('name');
+        var name = (rawName && rawName.trim) ? rawName.trim() : rawName;
+        var timeSecRaw = locAPI.get('time');
+        var timeSec = parseFloat(timeSecRaw);
+        if (isNaN(timeSec)) timeSec = 0;
+        var timeBeats = secondsToBeats(timeSec);
+        locs.push({ index: i, name: name, timeBeats: timeBeats });
+      } catch (e2) {
+        log('Locator read error @', i, e2);
+      }
     }
-  }
-  if (propUsed === null) {
-    log('Could not access locators (tried: locators, cue_points). Live version difference?');
+    return locs;
+  } catch (e) {
+    log('Error accessing cue_points:', e);
     return [];
   }
-  dlog('Locator container property detected:', propUsed, 'count=', count);
-  var locs = [];
-  for (var i = 0; i < count; i++) {
-    try {
-      var locPath = 'live_set ' + propUsed + ' ' + i;
-      var locAPI = new LiveAPI(locPath);
-      var rawName = locAPI.get('name');
-      var name = (rawName && rawName.trim) ? rawName.trim() : rawName;
-      var timeSecRaw = locAPI.get('time');
-      var timeSec = parseFloat(timeSecRaw);
-      if (isNaN(timeSec)) timeSec = 0;
-      var timeBeats = secondsToBeats(timeSec);
-      locs.push({ index: i, name: name, timeBeats: timeBeats });
-    } catch (e2) {
-      log('Locator read error @', i, e2);
-    }
-  }
-  return locs;
 }
 
 function findRenderEndLocator() {
