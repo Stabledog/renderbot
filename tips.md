@@ -1,5 +1,13 @@
 # RenderBot / Max for Live: Useful Tips
 
+## References
+
+- [Max JS Reference](https://docs.cycling74.com/apiref/js/) 
+   Official documentation for the Max JavaScript API, including the `post()` function used for console output.
+- [Live object model](https://docs.cycling74.com/apiref/lom/)
+- [Object and operator reference](https://docs.cycling74.com/reference/)
+
+
 ## 1. Save Max Console Output to a File Easily
 
 To save the Max Console window output to a file:

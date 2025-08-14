@@ -67,6 +67,7 @@ function output_dir() {
   log('Set output directory to:', state.outputDir);
 }
 
+
 // Support pressing the button (bang) or explicit 'render'.
 function bang() { render(); }
 function render() {
